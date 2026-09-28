@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo da Cobrinha — Retrô</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    color: #0f0;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
+    letter-spacing: 3px;
+  }
+  .placar {
+    font-size: 18px;
+    margin-bottom: 15px;
+    border: 2px solid #0f0;
+    padding: 10px 20px;
+    box-shadow: 0 0 15px #0f0 inset;
+  }
+  canvas {
+    border: 4px solid #0f0;
+    box-shadow: 0 0 25px #0f0, inset 0 0 25px #0f03;
+    background: #050510;
+    image-rendering: pixelated;
+  }
+  .botoes {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 60px);
+    grid-template-rows: repeat(2, 60px);
+    gap: 8px;
+  }
+  .btn {
+    background: #0a0a1a;
+    border: 2px solid #0f0;
+    color: #0f0;
+    font-size: 24px;
+    cursor: pointer;
+    border-radius: 4px;
+    box-shadow: 0 0 8px #0f05;
+  }
+  .btn:active {
+    background: #0f0;
+    color: #000;
+  }
+  .instrucoes {
+    margin-top: 15px;
+    font-size: 13px;
+    color: #8f8;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .game-over {
+    margin-top: 15px;
+    color: #f44;
+    text-shadow: 0 0 8px #f44;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>🐍 COBRINHA RETRÔ 🐍</h1>
+<div class="placar">PONTOS: <span id="pontos">0</span></div>
+<canvas id="tela" width="400" height="400"></canvas>
+<div class="game-over" id="fim-de-jogo">GAME OVER — Pressione ESPAÇO para jogar de novo!</div>
+<div class="botoes">
+  <div></div>
+  <button class="btn" onclick="mover('cima')">↑</button>
+  <div></div>
+  <button class="btn" onclick="mover('esquerda')">←</button>
+  <button class="btn" onclick="mover('baixo')">↓</button>
+  <button class="btn" onclick="mover('direita')">→</button>
+</div>
+<div class="instrucoes">
+  Use as setas do teclado ou os botões acima<br>
+  Coma os pontos verdes ↑ Não bata nas paredes nem em você mesmo!
+</div>
+
+<script>
+const tela = document.getElementById('tela');
+const ctx = tela.getContext('2d');
+const tamanho = 20;
+const qtd = tela.width / tamanho;
+
+let cobra = [{x: 6, y: 10}];
+let direcao = 'direita';
+let proximaDirecao = 'direita';
+let comida = novaComida();
+let pontos = 0;
+let rodando = true;
+
+function novaComida() {
+  return {
+    x: Math.floor(Math.random() * qtd),
+    y: Math.floor(Math.random() * qtd)
+  };
+}
+
+function mover(novaDir) {
+  if (
+    (novaDir === 'cima' && direcao === 'baixo') ||
+    (novaDir === 'baixo' && direcao === 'cima') ||
+    (novaDir === 'esquerda' && direcao === 'direita') ||
+    (novaDir === 'direita' && direcao === 'esquerda')
+  ) return;
+  proximaDirecao = novaDir;
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !rodando) reiniciar();
+  const teclas = {
+    ArrowUp: 'cima', ArrowDown: 'baixo',
+    ArrowLeft: 'esquerda', ArrowRight: 'direita'
+  };
+  if (teclas[e.code]) mover(teclas[e.code]);
+});
+
+function reiniciar() {
+  cobra = [{x: 6, y: 10}];
+  direcao = 'direita';
+  proximaDirecao = 'direita';
+  comida = novaComida();
+  pontos = 0;
+  rodando = true;
+  document.getElementById('pontos').textContent = '0';
+  document.getElementById('fim-de-jogo').style.display = 'none';
+  jogo();
+}
+
+function desenhar() {
+  // Fundo
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, tela.width, tela.height);
+
+  // Grade
+  ctx.strokeStyle = '#111133';
+  for (let i = 0; i <= qtd; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * tamanho, 0);
+    ctx.lineTo(i * tamanho, tela.height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * tamanho);
+    ctx.lineTo(tela.width, i * tamanho);
+    ctx.stroke();
+  }
+
+  // Comida
+  ctx.fillStyle = '#ff0055';
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#ff0055';
+  ctx.fillRect(comida.x * tamanho + 2, comida.y * tamanho + 2, tamanho - 4, tamanho - 4);
+  ctx.shadowBlur = 0;
+
+  // Cobra
+  cobra.forEach((parte, i) => {
+    ctx.fillStyle = i === 0 ? '#0f0' : '#0c0';
+    ctx.shadowBlur = i === 0 ? 12 : 6;
+    ctx.shadowColor = '#0f0';
+    ctx.fillRect(parte.x * tamanho + 1, parte.y * tamanho + 1, tamanho - 2, tamanho - 2);
+  });
+  ctx.shadowBlur = 0;
+}
+
+function atualizar() {
+  if (!rodando) return;
+
+  direcao = proximaDirecao;
+
+  let cabeca = {...cobra[0]};
+  if (direcao === 'cima') cabeca.y--;
+  if (direcao === 'baixo') cabeca.y++;
+  if (direcao === 'esquerda') cabeca.x--;
+  if (direcao === 'direita') cabeca.x++;
+
+  // Bateu na parede
+  if (cabeca.x < 0 || cabeca.x >= qtd || cabeca.y < 0 || cabeca.y >= qtd) {
+    gameOver();
+    return;
+  }
+
+  // Bateu nela mesma
+  if (cobra.some(p => p.x === cabeca.x && p.y === cabeca.y)) {
+    gameOver();
+    return;
+  }
+
+  cobra.unshift(cabeca);
+
+  // Comeu a comida
+  if (cabeca.x === comida.x && cabeca.y === comida.y) {
+    pontos += 10;
+    document.getElementById('pontos').textContent = pontos;
+    comida = novaComida();
+  } else {
+    cobra.pop();
+  }
+}
+
+function gameOver() {
+  rodando = false;
+  document.getElementById('fim-de-jogo').style.display = 'block';
+}
+
+function jogo() {
+  if (!rodando) return;
+  atualizar();
+  desenhar();
+  setTimeout(jogo, 150 - Math.min(pontos, 100));
+}
+
+jogo();
+</script>
+</body>
+</html>
